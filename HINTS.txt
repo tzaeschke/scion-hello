@@ -1,0 +1,8 @@
+
+
+daemon port info in:
+- gen/AS.../sd.toml
+- ps -ef | grep daemon
+  -> lsof -ni | grep <PID>
+  -> netstat -pantu | grep <PID>
+

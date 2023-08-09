@@ -17,14 +17,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/scionproto/scion/pkg/private/common"
+	"github.com/scionproto/scion/pkg/private/serrors"
 	"net"
 	"os"
 	"time"
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/daemon"
-	"github.com/scionproto/scion/pkg/private/common"
-	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/snet"
 	"github.com/scionproto/scion/pkg/snet/metrics"
 	"github.com/scionproto/scion/pkg/sock/reliable"
@@ -47,10 +47,11 @@ func realMain() int {
 
 	fmt.Print("Connecting to dispatcher ... ")
 	disp := reliable.NewDispatcher("")
-	fmt.Println("dispatcher connected at ", disp)
+	fmt.Println("dispatcher connected:", disp)
 
 	//daemonAddr := "127.0.0.1:30255" // Default address from daemon.go
-	daemonAddr := "[fd00:f00d:cafe::7f00:a]:31010" // from 112-topo
+	//daemonAddr := "[fd00:f00d:cafe::7f00:a]:31010" // from 112-topo
+	daemonAddr := "[fd00:f00d:cafe::7f00:b]:30255" // from 112 topo
 	fmt.Print("Connecting to daemon: ", daemonAddr, " ... ")
 	// TODO the following is deprecated
 	daemonConn, err := daemon.NewService(daemonAddr).Connect(ctx)
@@ -71,28 +72,32 @@ func realMain() int {
 	fmt.Println(" done")
 
 	// register
-	srcIA, err := addr.ParseIA("1-ff00:0:112")
+	localIA, err := addr.ParseIA("1-ff00:0:112")
 	checkError(err)
-	srcAddr, err := net.ResolveUDPAddr("udp", "127.0.0.2:0")
+	localAddr, err := net.ResolveUDPAddr("udp", "[::1]:8080")
 	checkError(err)
 	fmt.Print("Registering ... ")
-	conn, port, err := connFactory.Register(context.Background(), srcIA, srcAddr, addr.SvcNone)
+	conn, port, err := connFactory.Register(context.Background(), localIA, localAddr, addr.SvcNone)
+	defer conn.Close()
 	checkErr(err, "Error registering")
 	fmt.Println(" done")
 
-	fmt.Printf("Connected: %v,[%v]:%d \n", srcIA, srcAddr.IP, port)
-	defer conn.Close()
+	fmt.Printf("Connected as: %v,[%v]:%d \n", localIA, localAddr.IP, port)
 
-	err = handlePing(conn)
-	checkError(err)
+	for true {
+		err = handlePing(conn)
+		checkError(err)
+	}
 	return 0
 }
 
 func handlePing(conn snet.PacketConn) error {
 	var p snet.Packet
 	var ov net.UDPAddr
+	fmt.Print("Waiting ... ")
 	err := conn.ReadFrom(&p, &ov)
 	checkErr(err, "Error reading packet")
+	fmt.Println("received packet")
 
 	udp, ok := p.Payload.(snet.UDPPayload)
 	checkOk(ok, "Error reading payload")
@@ -103,7 +108,7 @@ func handlePing(conn snet.PacketConn) error {
 	p.Payload = snet.UDPPayload{
 		DstPort: udp.SrcPort,
 		SrcPort: udp.DstPort,
-		Payload: []byte("hello again!"),
+		Payload: []byte("Re: " + string(udp.Payload)),
 	}
 
 	// reverse path
