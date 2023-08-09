@@ -60,7 +60,7 @@ func realMain() int {
 	checkError(err)
 	srcIA, err := addr.ParseIA("1-ff00:0:110")
 	checkError(err)
-	srcAddr, err := net.ResolveUDPAddr("udp", "127.0.0.2:0")
+	srcAddr, err := net.ResolveUDPAddr("udp", "127.0.0.2:100")
 	checkError(err)
 	dstAddr, err := net.ResolveUDPAddr("udp", "[::1]:8080")
 	checkError(err)
