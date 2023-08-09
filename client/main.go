@@ -67,10 +67,9 @@ func realMain() int {
 	fmt.Print("Registering ... ")
 	conn, port, err := connFactory.Register(context.Background(), srcIA, srcAddr, addr.SvcNone)
 	checkErr(err, "Error registering")
-	fmt.Println(" done")
-
-	fmt.Printf("Connected as: %v,[%v]:%d \n", srcIA, srcAddr.IP, port)
 	defer conn.Close()
+	fmt.Println(" done")
+	fmt.Printf("Connected as: %v,[%v]:%d \n", srcIA, srcAddr.IP, port)
 
 	// get path
 	fmt.Print("Requesting path ...")
@@ -83,22 +82,25 @@ func realMain() int {
 		fmt.Println("   ", pe)
 	}
 
-	// TODO check that it has no error
-	path := paths[0]
+	// send packet
+	sendPacket(conn, dstIA, dstAddr, srcIA, srcAddr, port, paths)
 
-	// remote addr
-	var remote = snet.UDPAddr{}
-	remote.Host = dstAddr
-	remote.Path = path.Dataplane()
-	remote.NextHop = path.UnderlayNextHop()
+	// receive answer
+	receiveAnswer(conn)
 
 	// send packet
-	//remoteHostIP, ok := netip.AddrFromSlice(remote.Host.IP)
-	//checkOk(ok, fmt.Sprintf("Failed to parse address: %v", remote.Host.IP))
-	//localHostIP, ok := netip.AddrFromSlice(srcAddr.IP)
-	//checkOk(ok, fmt.Sprintf("Failed to parse address: %v", srcAddr.IP))
+	sendPacket(conn, dstIA, dstAddr, srcIA, srcAddr, port, paths)
+
+	// receive answer
+	receiveAnswer(conn)
+
+	return 0 // TODO
+}
+
+func sendPacket(conn snet.PacketConn, dstIA addr.IA, dstAddr *net.UDPAddr, srcIA addr.IA, srcAddr *net.UDPAddr, returnPort uint16, paths []snet.Path) {
 	fmt.Printf("Destination: %v,%v\n", dstIA, dstAddr)
 	fmt.Print("Creating packet ... ")
+	path := paths[0]
 	pkt := &snet.Packet{
 		PacketInfo: snet.PacketInfo{
 			Destination: snet.SCIONAddress{
@@ -109,9 +111,9 @@ func realMain() int {
 				IA:   srcIA,
 				Host: addr.HostFromIP(srcAddr.IP),
 			},
-			Path: remote.Path,
+			Path: path.Dataplane(),
 			Payload: snet.UDPPayload{
-				SrcPort: port,
+				SrcPort: returnPort,
 				DstPort: uint16(dstAddr.Port),
 				Payload: []byte("Hello scion"),
 			},
@@ -119,11 +121,51 @@ func realMain() int {
 	}
 	fmt.Println("done")
 
-	fmt.Printf("Sending packet to first hop: %v  ... ", remote.NextHop)
-	err = conn.WriteTo(pkt, remote.NextHop)
+	fmt.Printf("Sending packet to first hop: %v  ... ", path.UnderlayNextHop())
+	err := conn.WriteTo(pkt, path.UnderlayNextHop())
 	checkErr(err, "Error while Sending packet")
 	fmt.Println("done")
-	return 0 // TODO
+}
+
+func receiveAnswer(conn snet.PacketConn) error {
+	var p snet.Packet
+	var ov net.UDPAddr
+	fmt.Print("Waiting ... ")
+	err := conn.ReadFrom(&p, &ov)
+	checkErr(err, "Error reading packet")
+	fmt.Println("received answer")
+
+	udp, ok := p.Payload.(snet.UDPPayload)
+	checkOk(ok, "Error reading payload")
+
+	fmt.Printf("Received message: \"%s\" from %v:%v\n", string(udp.Payload), ov.IP, udp.SrcPort)
+
+	//p.Destination, p.Source = p.Source, p.Destination
+	//p.Payload = snet.UDPPayload{
+	//	DstPort: udp.SrcPort,
+	//	SrcPort: udp.DstPort,
+	//	Payload: []byte("Re: " + string(udp.Payload)),
+	//}
+	//
+	//// reverse path
+	//rpath, ok := p.Path.(snet.RawPath)
+	//if !ok {
+	//	return serrors.New("unecpected path", "type", common.TypeOf(p.Path))
+	//}
+	//
+	//replypather := snet.DefaultReplyPather{}
+	//replyPath, err := replypather.ReplyPath(rpath)
+	//if err != nil {
+	//	return serrors.WrapStr("creating reply path", err)
+	//}
+	//p.Path = replyPath
+	//// Send pong
+	//if err := conn.WriteTo(&p, &ov); err != nil {
+	//	return serrors.WrapStr("sending reply", err)
+	//}
+	//
+	//fmt.Println("Sent answer to:", p.Destination)
+	return nil
 }
 
 func checkErr(err error, msg string) {

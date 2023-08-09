@@ -102,7 +102,7 @@ func handlePing(conn snet.PacketConn) error {
 	udp, ok := p.Payload.(snet.UDPPayload)
 	checkOk(ok, "Error reading payload")
 
-	fmt.Printf("Received message: \"%s\" from %v:%v", string(udp.Payload), ov.IP, udp.SrcPort)
+	fmt.Printf("Received message: \"%s\" from %v:%v\n", string(udp.Payload), ov.IP, udp.SrcPort)
 
 	p.Destination, p.Source = p.Source, p.Destination
 	p.Payload = snet.UDPPayload{
