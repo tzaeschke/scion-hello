@@ -17,8 +17,19 @@ Show recently deceased daemons
 - docker ps -a
 
 
+More info
+./tools/supervisor.sh status
+
+
+
 bazel run  //acceptance/cert_renewal:test_setup
 bazel run  //acceptance/cert_renewal:test_run
 bazel run  //acceptance/cert_renewal:test_teardown
 
 bazel test --config=integration //acceptance/cert_renewal:all
+
+wireshark filter for ping/pong
+ip.dst == 127.0.0.2 || ipv6.dst == ::1
+scion.dst_as == "ff00:0:110"
+
+tshark -i loopback -Y "ip.dst == 127.0.0.2 || ipv6.dst == ::1"

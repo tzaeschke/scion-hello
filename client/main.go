@@ -3,21 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
-	"net"
-	"os"
-	"time"
-
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/daemon"
 	"github.com/scionproto/scion/pkg/snet"
 	"github.com/scionproto/scion/pkg/snet/metrics"
 	"github.com/scionproto/scion/pkg/sock/reliable"
+	"net"
+	"os"
 )
 
 var (
 	scionPacketConnMetrics = metrics.NewSCIONPacketConnMetrics()
 	scmpErrorsCounter      = scionPacketConnMetrics.SCMPErrors
-	DefaultIOTimeout       = 1 * time.Second
 )
 
 func main() {
@@ -104,6 +101,7 @@ func realMain() int {
 }
 
 func sendPacket(conn snet.PacketConn, dstIA addr.IA, dstAddr *net.UDPAddr, srcIA addr.IA, srcAddr *net.UDPAddr, returnPort uint16, paths []snet.Path) {
+	fmt.Printf("Source: %v,%v\n", srcIA, srcAddr)
 	fmt.Printf("Destination: %v,%v\n", dstIA, dstAddr)
 	fmt.Print("Creating packet ... ")
 	path := paths[0]

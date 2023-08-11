@@ -11,7 +11,6 @@ import (
 	"github.com/scionproto/scion/pkg/sock/reliable"
 	"net"
 	"os"
-	"time"
 )
 
 // Should I use a python environment?
@@ -40,7 +39,6 @@ import (
 var (
 	scionPacketConnMetrics = metrics.NewSCIONPacketConnMetrics()
 	scmpErrorsCounter      = scionPacketConnMetrics.SCMPErrors
-	DefaultIOTimeout       = 1 * time.Second
 )
 
 func main() {
