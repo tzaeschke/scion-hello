@@ -63,6 +63,7 @@ func realMain() int {
 	srcAddr, err := net.ResolveUDPAddr("udp", "127.0.0.2:100")
 	checkError(err)
 	dstAddr, err := net.ResolveUDPAddr("udp", "[::1]:8080")
+	//dstAddr, err := net.ResolveUDPAddr("udp", "[127.0.0.111]:8080")
 	checkError(err)
 	fmt.Print("Registering ... ")
 	conn, port, err := connFactory.Register(context.Background(), srcIA, srcAddr, addr.SvcNone)
@@ -80,6 +81,11 @@ func realMain() int {
 	fmt.Println("Path:")
 	for _, pe := range paths {
 		fmt.Println("   ", pe)
+	}
+
+	if len(paths) == 0 {
+		fmt.Println("  ERROR: No paths found. Try running `./scion.sh topology -c topology/tiny.topo` first.")
+		return 1
 	}
 
 	// send packet

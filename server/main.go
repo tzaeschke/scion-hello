@@ -1,5 +1,19 @@
 package main
 
+import (
+	"fmt"
+	"github.com/scionproto/scion/pkg/addr"
+	"github.com/scionproto/scion/pkg/daemon"
+	"github.com/scionproto/scion/pkg/private/common"
+	"github.com/scionproto/scion/pkg/private/serrors"
+	"github.com/scionproto/scion/pkg/snet"
+	"github.com/scionproto/scion/pkg/snet/metrics"
+	"github.com/scionproto/scion/pkg/sock/reliable"
+	"net"
+	"os"
+	"time"
+)
+
 // Should I use a python environment?
 
 // sudo apt install python3-pip
@@ -8,26 +22,19 @@ package main
 
 // ./scion.sh bazel_remote
 // systemctl restart docker.service
-
+// sudo apt install ethtool
 // make test-integration
 // sudo update-alternatives --install /usr/local/bin/python python /usr/bin/python3 1
 // sudo apt install ssh-askpass-gnome
 // export SUDO_ASKPASS=/usr/bin/ssh-askpass
 
+// sudo vi /etc/sudoers
+// # Allow members of group sudo to execute any command
+// #%sudo  ALL=(ALL:ALL) ALL
+// %sudo ALL = (ALL) NOPASSWD: ALL
+
 import (
 	"context"
-	"fmt"
-	"github.com/scionproto/scion/pkg/private/common"
-	"github.com/scionproto/scion/pkg/private/serrors"
-	"net"
-	"os"
-	"time"
-
-	"github.com/scionproto/scion/pkg/addr"
-	"github.com/scionproto/scion/pkg/daemon"
-	"github.com/scionproto/scion/pkg/snet"
-	"github.com/scionproto/scion/pkg/snet/metrics"
-	"github.com/scionproto/scion/pkg/sock/reliable"
 )
 
 var (
@@ -74,6 +81,7 @@ func realMain() int {
 	// register
 	localIA, err := addr.ParseIA("1-ff00:0:112")
 	checkError(err)
+	//localAddr, err := net.ResolveUDPAddr("udp", "[127.0.0.111]:8080")
 	localAddr, err := net.ResolveUDPAddr("udp", "[::1]:8080")
 	checkError(err)
 	fmt.Print("Registering ... ")

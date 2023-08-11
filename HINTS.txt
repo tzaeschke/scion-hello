@@ -6,3 +6,19 @@ daemon port info in:
   -> lsof -ni | grep <PID>
   -> netstat -pantu | grep <PID>
 
+
+ tearing down integration tests:
+ - docker stop $(docker ps -a -q)
+- docker network prune
+- docker network ps
+- ./scion.sh bazel_remote
+
+Show recently deceased daemons
+- docker ps -a
+
+
+bazel run  //acceptance/cert_renewal:test_setup
+bazel run  //acceptance/cert_renewal:test_run
+bazel run  //acceptance/cert_renewal:test_teardown
+
+bazel test --config=integration //acceptance/cert_renewal:all
