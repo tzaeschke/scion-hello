@@ -57,6 +57,8 @@ func realMain() int {
 	checkError(err)
 	srcIA, err := addr.ParseIA("1-ff00:0:110")
 	checkError(err)
+	fmt.Println("src=", srcIA)
+	fmt.Println("dst=", dstIA)
 	srcAddr, err := net.ResolveUDPAddr("udp", "127.0.0.2:100")
 	checkError(err)
 	dstAddr, err := net.ResolveUDPAddr("udp", "[::1]:8080")
@@ -82,6 +84,7 @@ func realMain() int {
 
 	if len(paths) == 0 {
 		fmt.Println("  ERROR: No paths found. Try running `./scion.sh topology -c topology/tiny.topo` first.")
+		fmt.Println("         Also make sure that `./scion.sh run` is executed in a (venv).")
 		return 1
 	}
 
