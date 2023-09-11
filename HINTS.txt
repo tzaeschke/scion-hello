@@ -34,23 +34,41 @@ wireshark filter for ping/pong
 ip.dst == 127.0.0.2 || ipv6.dst == ::1
 scion.dst_as == "ff00:0:110"
 
+ip.len == 131 || (ip.len >= 132 && ip.len <= 145)
+scion.dst_as == "ff00:0:110" && udp.port != 50000 && udp.srcport != 50000 && ip.len > 102 && udp.port == 40041
+
+
 tshark -i loopback -Y "ip.dst == 127.0.0.2 || ipv6.dst == ::1"
 
 
 
-sudo iptables -t mangle -A PREROUTING -p UDP --dport 30041 -j TEE --gateway 127.0.0.2
-sudo iptables -t nat -A PREROUTING -d 127.0.0.2 -p UDP --dport 30041 -j DNAT  --to 127.0.0.1:40041
-
-sudo iptables -t mangle -L PREROUTING 1
-sudo iptables -t nat -L PREROUTING 2
-
-sudo iptables -t mangle -D PREROUTING 1
-sudo iptables -t nat -D PREROUTING 2
-
-
-sudo iptables -t nat -I PREROUTING --src 0/0 --dst 0/0 -p udp --dport 30041 -j REDIRECT --to-ports 40041
-sudo ip6tables -t nat -I PREROUTING --src 0/0 --dst 0/0 -p udp --dport 30041 -j REDIRECT --to-ports 40041
-
-
 sudo iptables -t nat -A OUTPUT -o lo -p udp -m udp --dport 30041 -j REDIRECT --to-ports 40041
 sudo ip6tables -t nat -A OUTPUT -o lo -p udp -m udp --dport 30041 -j REDIRECT --to-ports 40041
+
+
+Trouble shooting:
+-  "... all segments failed to verify: [ segment verification error ... "
+   Certificates expire after 3 days. Solution:
+   - Rebuild topology
+   - Or: use ./bin/scion-pki to refresh certificates
+
+
+ Book:
+ - Add MAC to index?
+ - p30 Fig. 2.7 + p103 5.6:  Why is the order of up-segment HopFields reversed? See also p107 Fig 5.9
+
+
+
+
+ Virtual Server
+ - ssh tunnel:
+ ssh -L 8888:localhost:8888 vagrant@localhost
+ vagrant up / halt / upload
+ ssh -p 2222 -L 8888:localhost:8888 vagrant@localhost -i .vagrant/machines/default/virtualbox/private_key
+
+
+
+
+
+sudo update-alternatives --install /usr/lib/go go /usr/lib/go-1.20 100 --slave /usr/bin/go go-bin /usr/lib/go-1.20/bin/go --slave /usr/bin/gofmt gofmt-bin /usr/lib/go-1.20/bin/gofmt
+
