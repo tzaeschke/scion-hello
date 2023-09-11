@@ -1,4 +1,37 @@
+SCIO install problems:
 
+https://docs.scion.org/en/latest/dev/setup.html
+
+- install_bazel:
+  - doesn't seem to work
+  - probably means "add ~/.local/bin" to path?
+  - I ended up doing this:
+    - Install bazelisk:
+      https://bazel.build/install/ubuntu
+    - Install (scion does not allow newer bazel versions)
+      bazel sudo apt install bazel-5.1.0
+
+Then before "install_deps", do:
+- python3 -m venv venv
+- source venv/bin/activate
+- vi tools/env/pip3/deps      -> remove "--user"
+
+make test-integration
+- I tried in .profile:
+   sudo apt install python-is-python3
+   sudo apt install ssh-askpass
+   export SUDO_ASKPASS=/usr/bin/ssh-askpass
+-> Still fails with numerous errors on Ubuntu 22.04 / Go 1.21
+Stderr:       | sudo: no askpass program specified, try setting SUDO_ASKPASS
+
+
+
+
+---  https://docs.scion.org/en/latest/dev/run.html
+pip3 install pyyaml
+
+
+================================================================================
 
 daemon port info in:
 - gen/AS.../sd.toml
