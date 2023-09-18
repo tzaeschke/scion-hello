@@ -80,6 +80,22 @@ func realMain() int {
 	fmt.Println("Path:")
 	for _, pe := range paths {
 		fmt.Println("   ", pe)
+		fmt.Println("        underlay=", pe.UnderlayNextHop())
+		//fmt.Println("        plane", pe.Dataplane().)
+		fmt.Println("        src=", pe.Source())
+		fmt.Println("        dst=", pe.Destination())
+		meta := pe.Metadata()
+		fmt.Println("        meta=", pe.Metadata())
+		fmt.Println("            Interfaces=", meta.Interfaces)
+		fmt.Println("            Geo=", meta.Geo)
+		fmt.Println("            Bandwidth=", meta.Bandwidth)
+		fmt.Println("            EpicAuths=", meta.EpicAuths)
+		fmt.Println("            Expiry=", meta.Expiry)
+		fmt.Println("            InternalHops=", meta.InternalHops)
+		fmt.Println("            Latency=", meta.Latency)
+		fmt.Println("            LinkType=", meta.LinkType)
+		fmt.Println("            MTU=", meta.MTU)
+		fmt.Println("            Notes=", meta.Notes)
 	}
 
 	if len(paths) == 0 {
@@ -127,9 +143,11 @@ func sendPacket(conn snet.PacketConn, dstIA addr.IA, dstAddr *net.UDPAddr, srcIA
 		},
 	}
 	fmt.Println("done")
+	fmt.Println("pkt bytes: ", pkt.Bytes)
 
 	fmt.Printf("Sending packet to first hop: %v  ... ", path.UnderlayNextHop())
 	err := conn.WriteTo(pkt, path.UnderlayNextHop())
+	fmt.Println("pkt bytes: ", pkt.Bytes)
 	checkErr(err, "Error while Sending packet")
 	fmt.Println("done")
 }

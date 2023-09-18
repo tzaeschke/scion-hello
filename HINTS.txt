@@ -77,6 +77,9 @@ tshark -i loopback -Y "ip.dst == 127.0.0.2 || ipv6.dst == ::1"
 
 sudo iptables -t nat -A OUTPUT -o lo -p udp -m udp --dport 30041 -j REDIRECT --to-ports 40041
 sudo ip6tables -t nat -A OUTPUT -o lo -p udp -m udp --dport 30041 -j REDIRECT --to-ports 40041
+sudo ip6tables -t nat -R OUTPUT 1
+sudo ip6tables -t nat -L OUTPUT
+
 
 
 Trouble shooting:
