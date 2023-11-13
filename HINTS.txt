@@ -57,6 +57,14 @@ More info
 
 
 
+end2end
+=======
+start tiny!
+go run tools/end2end/main.go --mode "server" --local 1-ff00:0:112,[::1]:8080 -sciond 127.0.0.12:30255
+go run tools/end2end/main.go -mode client -local 1-ff00:0:110,127.0.0.1:44444 -sciond 127.0.0.12:30255 -remote 1-ff00:0:112,[::1]:8080
+
+
+
 bazel run  //acceptance/cert_renewal:test_setup
 bazel run  //acceptance/cert_renewal:test_run
 bazel run  //acceptance/cert_renewal:test_teardown
@@ -77,7 +85,7 @@ tshark -i loopback -Y "ip.dst == 127.0.0.2 || ipv6.dst == ::1"
 
 sudo iptables -t nat -A OUTPUT -o lo -p udp -m udp --dport 30041 -j REDIRECT --to-ports 40041
 sudo ip6tables -t nat -A OUTPUT -o lo -p udp -m udp --dport 30041 -j REDIRECT --to-ports 40041
-sudo ip6tables -t nat -R OUTPUT 1
+sudo ip6tables -t nat -D OUTPUT 1
 sudo ip6tables -t nat -L OUTPUT
 
 
@@ -108,3 +116,13 @@ Trouble shooting:
 
 sudo update-alternatives --install /usr/lib/go go /usr/lib/go-1.20 100 --slave /usr/bin/go go-bin /usr/lib/go-1.20/bin/go --slave /usr/bin/gofmt gofmt-bin /usr/lib/go-1.20/bin/gofmt
 
+Control-Service .toml!
+----------------------
+[beaconing]
+registration_interval = "25s"
+origination_interval = "25s"
+propagation_interval = "25s"
+
+
+DNS:
+dig +short TXT ethz.ch | grep "scion="

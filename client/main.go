@@ -7,8 +7,8 @@ import (
 	"github.com/scionproto/scion/pkg/daemon"
 	"github.com/scionproto/scion/pkg/snet"
 	"github.com/scionproto/scion/pkg/snet/metrics"
-	"github.com/scionproto/scion/pkg/sock/reliable"
 	"net"
+	"net/netip"
 	"os"
 )
 
@@ -26,9 +26,9 @@ func realMain() int {
 
 	ctx := context.Background()
 
-	fmt.Print("Connecting to dispatcher ... ")
-	disp := reliable.NewDispatcher("")
-	fmt.Println("done")
+	//fmt.Print("Connecting to dispatcher ... ")
+	//disp := reliable.NewDispatcher("")
+	//fmt.Println("done")
 
 	daemonAddr := "[127.0.0.12]:30255" // from 110-topo
 	//daemonAddr := "127.0.0.1:30255" // Default address from daemon.go
@@ -41,14 +41,14 @@ func realMain() int {
 
 	revHandler := daemon.RevHandler{Connector: daemonConn}
 
+	// Without dispatcher ----------------------------------------------------------------------------------------
 	fmt.Print("Connection factory: ... ")
-	connFactory := &snet.DefaultPacketDispatcherService{
-		Dispatcher: disp,
+	connector := &snet.DefaultConnector{
 		SCMPHandler: snet.DefaultSCMPHandler{
 			RevocationHandler: revHandler,
 			SCMPErrors:        scmpErrorsCounter,
 		},
-		SCIONPacketConnMetrics: scionPacketConnMetrics,
+		Metrics: scionPacketConnMetrics,
 	}
 	fmt.Println(" done")
 
@@ -59,17 +59,55 @@ func realMain() int {
 	checkError(err)
 	fmt.Println("src=", srcIA)
 	fmt.Println("dst=", dstIA)
-	srcAddr, err := net.ResolveUDPAddr("udp", "127.0.0.2:100")
+	srcAddr, err := net.ResolveUDPAddr("udp", "127.0.0.2:12345")
 	checkError(err)
 	dstAddr, err := net.ResolveUDPAddr("udp", "[::1]:8080")
-	//dstAddr, err := net.ResolveUDPAddr("udp", "[127.0.0.111]:8080")
+	//dstAddr, err := net.ResolveUDPAddr("udp", "[::1]:44444")
+	//dstAddr, err := net.ResolveUDPAddr("udp", "[fd00:f00d:cafe::7f00:9]:8080")
+	//dstAddr, err := net.ResolveUDPAddr("udp", "[fd00:f00d:cafe::7f00:c]:8080")
+	//dstAddr, err := net.ResolveUDPAddr("udp", "[127.0.0.1]:8080")
 	checkError(err)
 	fmt.Print("Registering ... ")
-	conn, port, err := connFactory.Register(context.Background(), srcIA, srcAddr, addr.SvcNone)
+	conn, err := connector.OpenUDP(srcAddr)
 	checkErr(err, "Error registering")
 	defer conn.Close()
 	fmt.Println(" done")
+	port := uint16(srcAddr.Port)
 	fmt.Printf("Connected as: %v,[%v]:%d \n", srcIA, srcAddr.IP, port)
+
+	// With dispatcher ----------------------------------------------------------------------------------------
+	//fmt.Print("Connection factory: ... ")
+	//connFactory := &snet.DefaultPacketDispatcherService{
+	//	Dispatcher: disp,
+	//	SCMPHandler: snet.DefaultSCMPHandler{
+	//		RevocationHandler: revHandler,
+	//		SCMPErrors:        scmpErrorsCounter,
+	//	},
+	//	SCIONPacketConnMetrics: scionPacketConnMetrics,
+	//}
+	//fmt.Println(" done")
+	//
+	//// register
+	//dstIA, err := addr.ParseIA("1-ff00:0:112")
+	//checkError(err)
+	//srcIA, err := addr.ParseIA("1-ff00:0:110")
+	//checkError(err)
+	//fmt.Println("src=", srcIA)
+	//fmt.Println("dst=", dstIA)
+	//srcAddr, err := net.ResolveUDPAddr("udp", "127.0.0.2:100")
+	//checkError(err)
+	////dstAddr, err := net.ResolveUDPAddr("udp", "[::1]:8080")
+	//dstAddr, err := net.ResolveUDPAddr("udp", "[::1]:44444")
+	////dstAddr, err := net.ResolveUDPAddr("udp", "[fd00:f00d:cafe::7f00:9]:8080")
+	////dstAddr, err := net.ResolveUDPAddr("udp", "[fd00:f00d:cafe::7f00:c]:8080")
+	////dstAddr, err := net.ResolveUDPAddr("udp", "[127.0.0.1]:8080")
+	//checkError(err)
+	//fmt.Print("Registering ... ")
+	//conn, port, err := connFactory.Register(context.Background(), srcIA, srcAddr, addr.SvcNone)
+	//checkErr(err, "Error registering")
+	//defer conn.Close()
+	//fmt.Println(" done")
+	//fmt.Printf("Connected as: %v,[%v]:%d \n", srcIA, srcAddr.IP, port)
 
 	// get path
 	fmt.Print("Requesting path ...")
@@ -123,16 +161,20 @@ func sendPacket(conn snet.PacketConn, dstIA addr.IA, dstAddr *net.UDPAddr, srcIA
 	fmt.Printf("Source: %v,%v\n", srcIA, srcAddr)
 	fmt.Printf("Destination: %v,%v\n", dstIA, dstAddr)
 	fmt.Print("Creating packet ... ")
+	remoteHostIP, ok := netip.AddrFromSlice(dstAddr.IP)
+	checkOk(ok, fmt.Sprint("invalid remote host IP", "ip", dstAddr.IP))
+	localHostIP, ok := netip.AddrFromSlice(srcAddr.IP)
+	checkOk(ok, fmt.Sprint("invalid local host IP", "ip", srcAddr.IP))
 	path := paths[0]
 	pkt := &snet.Packet{
 		PacketInfo: snet.PacketInfo{
 			Destination: snet.SCIONAddress{
 				IA:   dstIA,
-				Host: addr.HostFromIP(dstAddr.IP),
+				Host: addr.HostIP(remoteHostIP),
 			},
 			Source: snet.SCIONAddress{
 				IA:   srcIA,
-				Host: addr.HostFromIP(srcAddr.IP),
+				Host: addr.HostIP(localHostIP),
 			},
 			Path: path.Dataplane(),
 			Payload: snet.UDPPayload{
@@ -143,7 +185,7 @@ func sendPacket(conn snet.PacketConn, dstIA addr.IA, dstAddr *net.UDPAddr, srcIA
 		},
 	}
 	fmt.Println("done")
-	fmt.Println("pkt bytes: ", pkt.Bytes)
+	//fmt.Println("pkt bytes: ", pkt.Bytes)
 
 	fmt.Printf("Sending packet to first hop: %v  ... ", path.UnderlayNextHop())
 	err := conn.WriteTo(pkt, path.UnderlayNextHop())

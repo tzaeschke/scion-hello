@@ -8,7 +8,6 @@ import (
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/snet"
 	"github.com/scionproto/scion/pkg/snet/metrics"
-	"github.com/scionproto/scion/pkg/sock/reliable"
 	"net"
 	"os"
 )
@@ -45,14 +44,15 @@ func main() {
 	os.Exit(realMain())
 }
 
+// Without dispatcher
 func realMain() int {
 	fmt.Println("Starting server ...")
 
 	ctx := context.Background()
 
-	fmt.Print("Connecting to dispatcher ... ")
-	disp := reliable.NewDispatcher("")
-	fmt.Println("dispatcher connected:", disp)
+	//fmt.Print("Connecting to dispatcher ... ")
+	//disp := reliable.NewDispatcher("")
+	//fmt.Println("dispatcher connected:", disp)
 
 	//daemonAddr := "127.0.0.1:30255" // Default address from daemon.go
 	//daemonAddr := "[fd00:f00d:cafe::7f00:a]:31010" // from 112-topo
@@ -66,13 +66,12 @@ func realMain() int {
 	revHandler := daemon.RevHandler{Connector: daemonConn}
 
 	fmt.Print("Connection factory: ... ")
-	connFactory := &snet.DefaultPacketDispatcherService{
-		Dispatcher: disp,
+	connector := &snet.DefaultConnector{
 		SCMPHandler: snet.DefaultSCMPHandler{
 			RevocationHandler: revHandler,
 			SCMPErrors:        scmpErrorsCounter,
 		},
-		SCIONPacketConnMetrics: scionPacketConnMetrics,
+		Metrics: scionPacketConnMetrics,
 	}
 	fmt.Println(" done")
 
@@ -83,12 +82,12 @@ func realMain() int {
 	localAddr, err := net.ResolveUDPAddr("udp", "[::1]:8080")
 	checkError(err)
 	fmt.Print("Registering ... ")
-	conn, port, err := connFactory.Register(context.Background(), localIA, localAddr, addr.SvcNone)
+	conn, err := connector.OpenUDP(localAddr)
 	defer conn.Close()
 	checkErr(err, "Error registering")
 	fmt.Println(" done")
 
-	fmt.Printf("Connected as: %v,[%v]:%d \n", localIA, localAddr.IP, port)
+	fmt.Printf("Connected as: %v,[%v]:%d \n", localIA, localAddr.IP, localAddr.Port)
 
 	for true {
 		err = handlePing(conn)
@@ -96,6 +95,59 @@ func realMain() int {
 	}
 	return 0
 }
+
+// WIth dispatcher
+//func realMain() int {
+//	fmt.Println("Starting server ...")
+//
+//	ctx := context.Background()
+//
+//	fmt.Print("Connecting to dispatcher ... ")
+//	disp := reliable.NewDispatcher("")
+//	fmt.Println("dispatcher connected:", disp)
+//
+//	//daemonAddr := "127.0.0.1:30255" // Default address from daemon.go
+//	//daemonAddr := "[fd00:f00d:cafe::7f00:a]:31010" // from 112-topo
+//	daemonAddr := "[fd00:f00d:cafe::7f00:b]:30255" // from 112 topo
+//	fmt.Print("Connecting to daemon: ", daemonAddr, " ... ")
+//	// TODO the following is deprecated
+//	daemonConn, err := daemon.NewService(daemonAddr).Connect(ctx)
+//	checkErr(err, "Error connecting to daemon")
+//	fmt.Println("done")
+//
+//	revHandler := daemon.RevHandler{Connector: daemonConn}
+//
+//	fmt.Print("Connection factory: ... ")
+//	connFactory := &snet.DefaultPacketDispatcherService{
+//		Dispatcher: disp,
+//		SCMPHandler: snet.DefaultSCMPHandler{
+//			RevocationHandler: revHandler,
+//			SCMPErrors:        scmpErrorsCounter,
+//		},
+//		SCIONPacketConnMetrics: scionPacketConnMetrics,
+//	}
+//	fmt.Println(" done")
+//
+//	// register
+//	localIA, err := addr.ParseIA("1-ff00:0:112")
+//	checkError(err)
+//	//localAddr, err := net.ResolveUDPAddr("udp", "[127.0.0.111]:8080")
+//	localAddr, err := net.ResolveUDPAddr("udp", "[::1]:8080")
+//	checkError(err)
+//	fmt.Print("Registering ... ")
+//	conn, port, err := connFactory.Register(context.Background(), localIA, localAddr, addr.SvcNone)
+//	defer conn.Close()
+//	checkErr(err, "Error registering")
+//	fmt.Println(" done")
+//
+//	fmt.Printf("Connected as: %v,[%v]:%d \n", localIA, localAddr.IP, port)
+//
+//	for true {
+//		err = handlePing(conn)
+//		checkError(err)
+//	}
+//	return 0
+//}
 
 func handlePing(conn snet.PacketConn) error {
 	var p snet.Packet
@@ -114,7 +166,8 @@ func handlePing(conn snet.PacketConn) error {
 	p.Payload = snet.UDPPayload{
 		DstPort: udp.SrcPort,
 		SrcPort: udp.DstPort,
-		Payload: []byte("Re: " + string(udp.Payload)),
+		// Payload: []byte("Re: " + string(udp.Payload)),
+		Payload: udp.Payload,
 	}
 
 	// reverse path
@@ -134,6 +187,7 @@ func handlePing(conn snet.PacketConn) error {
 		return serrors.WrapStr("sending reply", err)
 	}
 
+	fmt.Println("pkt bytes: ", p.Bytes)
 	fmt.Println("Sent answer to:", p.Destination)
 	return nil
 }
