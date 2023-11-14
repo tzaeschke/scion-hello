@@ -39,6 +39,13 @@ import (
 	integration "github.com/scionproto/scion/tools/integration/integrationlib"
 )
 
+/*
+Usage with dispatcher-less SCION:
+start "tiny" topology
+go run tools/end2end/main.go --mode "server" --local 1-ff00:0:112,[::1]:8080 -sciond 127.0.0.12:30255
+go run tools/end2end/main.go -mode client -local [1-ff00:0:110,127.0.0.1]:44444 -sciond 127.0.0.12:30255 -remote 1-ff00:0:112,[::1]:8080
+*/
+
 const (
 	ping = "Hello scion"
 	pong = "Hello scion"
