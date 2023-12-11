@@ -71,6 +71,8 @@ bazel run  //acceptance/cert_renewal:test_teardown
 
 bazel test --config=integration //acceptance/cert_renewal:all
 
+wireshark
+=========
 wireshark filter for ping/pong
 ip.dst == 127.0.0.2 || ipv6.dst == ::1
 scion.dst_as == "ff00:0:110"
@@ -126,3 +128,9 @@ propagation_interval = "25s"
 
 DNS:
 dig +short TXT ethz.ch | grep "scion="
+
+curl http://129.132.121.175:8041/topology
+
+PING:
+./bazel-bin/scion/cmd/scion/scion_/scion ping 1-ff00:0:110,127.0.0.10 --sciond 127.0.0.12:30255
+./bazel-bin/scion/cmd/scion/scion_/scion ping 1-ff00:0:112,[fd00:f00d:cafe::7f00:9] --sciond 127.0.0.12:30255
