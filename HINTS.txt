@@ -134,3 +134,9 @@ curl http://129.132.121.175:8041/topology
 PING:
 ./bazel-bin/scion/cmd/scion/scion_/scion ping 1-ff00:0:110,127.0.0.10 --sciond 127.0.0.12:30255
 ./bazel-bin/scion/cmd/scion/scion_/scion ping 1-ff00:0:112,[fd00:f00d:cafe::7f00:9] --sciond 127.0.0.12:30255
+
+./bazel-bin/scion/cmd/scion/scion_/scion showpaths 1-ff00:0:112 --sciond 127.0.0.19:30255
+
+Standard address for remote ping can be 0.0.0.0 -> the BR will answer.
+Standard port is 30041. Reply port is also 30041 with current software. With dispatch-less, the return port is
+determined by the ID of the ping.
